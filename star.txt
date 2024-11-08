@@ -1,0 +1,49 @@
+# Define a simulator instance
+set ns [new Simulator]
+
+# Open a file for NAM output
+set nf [open out.nam w]
+$ns namtrace-all $nf
+
+# Define the finish procedure
+proc finish {} {
+    global ns nf
+    $ns flush-trace
+    close $nf
+    exec nam out.nam &
+    exit 0
+}
+
+# Create the nodes (central node + leaf nodes)
+set center [$ns node] ;# Central node
+set n1 [$ns node]      ;# Leaf node 1
+set n2 [$ns node]      ;# Leaf node 2
+set n3 [$ns node]      ;# Leaf node 3
+set n4 [$ns node]      ;# Leaf node 4
+
+# Create links between the central node and the leaf nodes
+$ns duplex-link $center $n1 1Mb 10ms DropTail
+$ns duplex-link $center $n2 1Mb 10ms DropTail
+$ns duplex-link $center $n3 1Mb 10ms DropTail
+$ns duplex-link $center $n4 1Mb 10ms DropTail
+
+# Attach traffic sources
+set udp0 [new Agent/UDP]
+$ns attach-agent $n1 $udp0
+set null0 [new Agent/Null]
+$ns attach-agent $n2 $null0
+$ns connect $udp0 $null0
+
+# Create a CBR (Constant Bit Rate) traffic source
+set cbr0 [new Application/Traffic/CBR]
+$cbr0 set packetSize_ 500
+$cbr0 set interval_ 0.005
+$cbr0 attach-agent $udp0
+
+# Schedule events
+$ns at 0.5 "$cbr0 start"
+$ns at 4.5 "$cbr0 stop"
+$ns at 5.0 "finish"
+
+# Run the simulation
+$ns run
